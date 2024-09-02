@@ -1,33 +1,36 @@
 #compdef desk
 #autoload
 
-_all_desks() {
-  desks=($(desk list --only-names))
-}
+emulate -L zsh
+set -o extendedglob
+local -a desks desktops desks2 listopts
 
-local expl
-local -a desks
+# Change this to the location of the bash script for desk
+local deskcmd=${SHELL_SCRIPTS_DIRECTORY}/desk
 
-local -a _subcommands
-_subcommands=(
-  'help:Print a help message.'
-  'init:Initialize your desk configuration.'
-  'list:List available desks'
-  'ls:List available desks'
-  'edit:Edit or create a desk, defaults to current desk'
-  'go:Activate a desk'
-  '.:Activate a desk'
-  'run:Run a command within a desk environment'
-  'version:Show the desk version.'
-)
+desks=("${(f)$($deskcmd list)}")
+deskopts=()
+for desk in "${desks[@]}"; do
+    deskopts+=("${desk//(#b)(#s)([^ ]#) #(*)/${match[1]}:${match[2]}:}")
+done
 
-if (( CURRENT == 2 )); then
-  _describe -t commands 'desk subcommand' _subcommands
-  return
-fi
+_regex_words desktops 'desks' "${deskopts[@]}"
+desks2=("${reply[@]}")
 
-case "$words[2]" in
-  go|.|edit|run)
-    _all_desks
-    _wanted desks expl 'desks' compadd -a desks ;;
-esac
+_regex_words listopts 'list opts' '--only-names:List only the names of the desks' \
+	     '--no-format:Use - to separate names from descriptions'
+listopts=("${reply[@]}")
+
+_regex_words subcmd 'subcommands' 'help:Print a help message:' \
+	     "${DESK_ENV+\--no-format:Use - to separate alias/export/function names from their descriptions:}" \
+	     'init:Initialize your desk configuration:' \
+	     'list:List available desks:$listopts' \
+	     'edit:Edit or create a desk, defaults to current desk:$desks2' \
+	     'go:Activate a desk:$desks2' \
+	     'run:Run a command within a desk environment:$desks2' \
+	     'version:Show the desk version:'
+subcmd=("${reply[@]}")
+
+_regex_arguments _desk /$'[^\0]##\0'/ "${subcmd[@]}"
+_desk "$@"
+
