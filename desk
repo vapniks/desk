@@ -219,11 +219,14 @@ cmd_current() {
             # Last clause in the grep regexp accounts for fish functions.
             len=$((${#NAME} + 2))
             (( len > longest )) && longest=$len
-            local DOCLINE=$(
+            local BOTHLINES=$(
                 grep -B 1 -E \
-                    "^(alias ${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME" "$DESKPATH" \
-                    | grep "#")
-
+                    "^(alias ${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME|^typeset (-[a-zA-Z]+)? ${NAME}" \
+                    "$DESKPATH")
+            local DOCLINE=$(echo "${BOTHLINES}"|sed -n 1p)
+	        if [[ $BOTHLINES == *typeset* ]]; then
+		        NAME="\${${NAME}}"
+	        fi
             if [ -z "$DOCLINE" ]; then
                 out+="  ${NAME}"$'\n'
             else
@@ -276,6 +279,7 @@ get_callables() {
         | sed 's/alias \([^= ]*\)=.*/\1/' \
         | sed 's/export \([^= ]*\)=.*/\1/' \
         | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
+        | sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)=.*/\2/' \
         | sed -E "s/function (${FNAME_CHARS}+).*/\1/"
 }
 
