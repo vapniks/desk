@@ -31,6 +31,6 @@ _regex_words subcmd 'subcommands' 'help:Print a help message:' \
 	     'version:Show the desk version:'
 subcmd=("${reply[@]}")
 
-_regex_arguments _desk /$'[^\0]##\0'/ "${subcmd[@]}"
-_desk "$@"
+_regex_arguments _desk_completer /$'[^\0]##\0'/ "${subcmd[@]}"
+_desk_completer "$@"
 
