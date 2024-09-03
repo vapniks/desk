@@ -279,7 +279,7 @@ get_callables() {
         | sed 's/alias \([^= ]*\)=.*/\1/' \
         | sed 's/export \([^= ]*\)=.*/\1/' \
         | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
-        | sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)=.*/\2/' \
+        | sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)\(=.*\)\?/\2/' \
         | sed -E "s/function (${FNAME_CHARS}+).*/\1/"
 }
 
