@@ -221,7 +221,7 @@ cmd_current() {
             (( len > longest )) && longest=$len
             local BOTHLINES=$(
                 grep -B 1 -E \
-                    "^(alias ${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME|^typeset (-[a-zA-Z]+)? ${NAME}" \
+                    "^(alias (-[gmrsL]+ )?${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME|^typeset (-[a-zA-Z]+)? ${NAME}" \
                     "$DESKPATH")
             local DOCLINE=$(echo "${BOTHLINES}"|sed -n 1p)
 	        if [[ $BOTHLINES == *typeset* ]]; then
@@ -276,7 +276,7 @@ echo_description() {
 get_callables() {
     local DESKPATH=$1
     grep -E "^(alias |export |(function )?${FNAME_CHARS}+ ?\()|function $NAME" "$DESKPATH" \
-        | sed 's/alias \([^= ]*\)=.*/\1/' \
+        | sed -E 's/alias (-[gmrsL]+ )?([^= ]*)=.*/\2/' \
         | sed 's/export \([^= ]*\)=.*/\1/' \
         | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
         | sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)\(=.*\)\?/\2/' \
