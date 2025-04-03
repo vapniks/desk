@@ -200,7 +200,6 @@ cmd_current() {
     fi
 
     local DESKPATH=$DESK_ENV
-    local CALLABLES=$(get_callables "$DESKPATH")
     local AUTO_ALIGN len longest out
 
     while [[ $# -gt 0 ]]; do
@@ -209,7 +208,10 @@ cmd_current() {
         esac
         shift
     done
-    printf "%s - %s\n" "$DESK_NAME" "$(echo_description "$DESKPATH")"
+    if [[ $DESKPATH = $DESK_ENV ]]; then    
+	printf "%s - %s\n" "$DESK_NAME" "$(echo_description "$DESKPATH")"
+    fi
+    local CALLABLES=$(get_callables "$DESKPATH")
 
     if [[ -n "$CALLABLES" ]]; then
 
@@ -221,24 +223,30 @@ cmd_current() {
             (( len > longest )) && longest=$len
             local BOTHLINES=$(
                 grep -B 1 -E \
-                    "^(alias (-[gmrsL]+ )?${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME|^typeset (-[a-zA-Z]+)? ${NAME}" \
-                    "$DESKPATH")
-            local DOCLINE=$(echo "${BOTHLINES}"|sed -n 1p)
-	        if [[ $BOTHLINES == *typeset* ]]; then
-		        NAME="\${${NAME}}"
-	        fi
-            if [ -z "$DOCLINE" ]; then
-                out+="  ${NAME}"$'\n'
-            else
-                out+="  ${NAME} - ${DOCLINE##\# }"$'\n'
-            fi
+		     "^(alias (-[gmrsL]+ )?${NAME}=|export ${NAME}=|(function )?${NAME}( )?\()|function $NAME|^typeset (-[a-zA-Z]+)? ${NAME}|^(source|\.) ${NAME}" "$DESKPATH")
+	    local DOCLINE=$(echo "${BOTHLINES}"|sed -n 1p)
+	    local SRCLINE=$(echo "${BOTHLINES}"|sed -n 2p)
+	    if [[ $SRCLINE =~ ^(source|\.) ]]; then
+		cmd_current ${NAME} ${AUTO_ALIGN+--no-format}
+		out="${out#
+}"
+	    else
+		if [[ $SRCLINE == *typeset* ]]; then
+		    NAME="\${${NAME}}"
+		fi
+		if [[ $DOCLINE = \#* ]]; then
+                    out+="  ${NAME} - ${DOCLINE##\# }"$'\n'
+		else
+                    out+="  ${NAME}"$'\n'
+		fi		
+	    fi
         done
 
         if [[ "$AUTO_ALIGN" != false ]]; then
-          print_aligned "$out" "$longest"
+            print_aligned "$out" "$longest"
         else
-          printf "%s" "$out"
-        fi
+            printf "%s" "$out"
+	fi
     fi
 }
 
@@ -275,12 +283,13 @@ echo_description() {
 # Echo a list of aliases, exports, and functions for a given desk
 get_callables() {
     local DESKPATH=$1
-    grep -E "^(alias |export |(function )?${FNAME_CHARS}+ ?\()|function $NAME" "$DESKPATH" \
+    grep -E "^(alias |export |(function )?${FNAME_CHARS}+ ?\(|typeset (-[a-zA-Z]+)? ${NAME})|function $NAME|^(source|\.)" "$DESKPATH" \
         | sed -E 's/alias (-[gmrsL]+ )?([^= ]*)=.*/\2/' \
         | sed 's/export \([^= ]*\)=.*/\1/' \
         | sed -E "s/(function )?(${FNAME_CHARS}+) ?\(\).*/\2/" \
-        | sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)\(=.*\)\?/\2/' \
-        | sed -E "s/function (${FNAME_CHARS}+).*/\1/"
+	| sed 's/typeset \(-[a-zA-Z]\+\)\? \([^=]\+\)\(=.*\)\?/\2/' \
+        | sed -E "s/function (${FNAME_CHARS}+).*/\1/" \
+	| sed -E 's/^(source|\.) ([^[:space:]]+)/\2/'
 }
 
 get_running_shell() {
